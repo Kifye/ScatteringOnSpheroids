@@ -1,1 +1,1 @@
-# RefractionOnSpheroids
+# ScatteringOnSpheroids
