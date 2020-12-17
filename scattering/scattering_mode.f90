@@ -125,10 +125,10 @@ contains
 
         tmatr = this%tmatr
         return
-!        do m = 1, this%maxm
-!            call multiply_by_diag_right(tmatr(m, :, :), this%matrix_size, this%scatterer%layer(m, 0)%r1)
-!            call multiply_by_diag_left(tmatr(m, :, :), this%matrix_size, 1q0 / this%scatterer%layer(m, 0)%r3)
-!        end do
+        !        do m = 1, this%maxm
+        !            call multiply_by_diag_right(tmatr(m, :, :), this%matrix_size, this%scatterer%layer(m, 0)%r1)
+        !            call multiply_by_diag_left(tmatr(m, :, :), this%matrix_size, 1q0 / this%scatterer%layer(m, 0)%r3)
+        !        end do
 
     end function get_tmatrix
 
@@ -262,10 +262,10 @@ contains
         res = -(eps(1) / eps(0) - mu(0) / mu(1)) * f * ksi / (ksi ** 2 - f) * matmul(Q01, Epsilon) - &
                 (eps(1) / eps(0) - 1q0) * ksi * matmul(Q01, identity - 2 * ksi**2 * Q11)
 
-        write(*,*) 'res = ', res
-        write(*,*) 'res = ', transpose(res)
-        write(*,*) 'ksi = ', ksi
-        write(*,*)
+        !write(*, *) 'res = ', res
+        !write(*, *) 'res = ', transpose(res)
+        !write(*, *) 'ksi = ', ksi, 'ksi**2 = ', ksi**2, ksi**2q0, ksi*ksi
+        !write(*, *)
         adder = (mu(0) / mu(1) - 1q0) * ksi**2 * Q01 - mu(0) / mu(1) * Delta
         call multiply_by_diag_right(adder, matrix_size, right_multiplier)
         res = res + adder
@@ -430,7 +430,7 @@ contains
         k1 = 2 * PI / this%scatterer%lambda
         do m = 1, this%maxm
             c1 = this%scatterer%layer(m, 0)%c
-            write(*,*) 'k1 = ', k1, ' c1 = ', c1
+            write(*, *) 'k1 = ', k1, ' c1 = ', c1
             !write(*,*) 'check_a11'
             !do j = 1, 3
             !    write(*,*) this%A31(1, j, 1:3)
@@ -441,7 +441,6 @@ contains
             R31 = this%scatterer%layer(m, 0)%r3d / this%scatterer%layer(m, 0)%r3
             R12 = this%scatterer%layer(m, 1)%r1d / this%scatterer%layer(m, 1)%r1
             W1 = -1q0 / (R31 - R11)
-            !write(*,*) 'W1 =', W1
             !write(*,*) 'W1 =', qcmplx(0q0, 1q0) * c1 * (this%scatterer%ksi(1)**2 - this%scatterer%f) * &
             !        this%scatterer%layer(m, 0)%r1 * this%scatterer%layer(m, 0)%r3
             call set_full_matrix(this%scatterer%f, this%scatterer%ksi(1), eps, mu, &
@@ -485,26 +484,10 @@ contains
             call this%calculate_matrices()
         endif
 
-
         do i = 1, this%maxm
-            !write(*,*) 'A11 = ', this%A11(i,:,:)
-            !write(*,*) 'A11 = ', transpose(this%A11(i,:,:))
-            !write(*,*) 'A31 = ', this%A31(i,:,:)
-            !write(*,*) 'A31 = ', transpose(this%A31(i,:,:))
-
             call inverse_matrix(this%A31(i, :, :), this%matrix_size, this%A31inv(i, :, :))
-
-            !		write(*,*) 'inverse'
-            !		write(*,*) this%A31inv(1:4,1:4,mode)
-            !  write(*,*) 'check inverse'
-            !  write(*,*) matmul(this%A31, this%A31inv)
-            !  write(*,*)
             this%tmatr(i, :, :) = -matmul(this%A11(i, :, :), this%A31inv(i, :, :))
-            !            call multiply_by_diag_right(this%tmatr(i, :, :), this%matrix_size, this%scatterer%layer(i, 0)%r1)
-            !            call multiply_by_diag_left(this%tmatr(i,:,:), this%matrix_size, 1q0 / this%scatterer%layer(i,0)%r3)
         enddo
-        !        call multiply_by_diag_right(this%tmatr, this%matrix_size, this%scatterer%layer(0)%r1)
-        !       call multiply_by_diag_left(this%tmatr, this%matrix_size, 1q0 / this%scatterer%layer(0)%r3)
 
         this%tmatrix_calculated = .true.
     end subroutine calculate_tmatrix
@@ -735,12 +718,12 @@ contains
             do i = 1, this%matrix_size / 2
                 do j = 1, this%matrix_size / 2
                     sca = sca + real(ideg**(j - i) * (&
-                            k1**2 * this%solution(m, i) * conjg(this%solution(m, j)) * Omega(i, j) + &
-                            ideg * k1 * (&
-                                    this%solution(m, i + this%matrix_size / 2) * conjg(this%solution(m, j)) * Kappa(i, j) - &
-                                    conjg(this%solution(m, j + this%matrix_size / 2)) * this%solution(m, i) * Kappa(j, i)) + &
-                            this%solution(m, i + this%matrix_size / 2) * conjg(this%solution(m, j + this%matrix_size / 2)) * &
-                                    Tau(i, j)), knd)
+                    k1**2 * this%solution(m, i) * conjg(this%solution(m, j)) * Omega(i, j) + &
+                    ideg * k1 * (&
+                    this%solution(m, i + this%matrix_size / 2) * conjg(this%solution(m, j)) * Kappa(i, j) - &
+                    conjg(this%solution(m, j + this%matrix_size / 2)) * this%solution(m, i) * Kappa(j, i)) + &
+                    this%solution(m, i + this%matrix_size / 2) * conjg(this%solution(m, j + this%matrix_size / 2)) * &
+                    Tau(i, j)), knd)
                 end do
             end do
         end do
