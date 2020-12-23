@@ -21,7 +21,7 @@ module scattering
         real(knd), allocatable, dimension(:) :: ksi   !  1..number_of_layers
         complex(knd), allocatable, dimension(:) :: eps, mu  !  0..number_of_layers
 
-        complex(knd), allocatable, dimension(:, :, :) :: Delta, Kappa, Gamma01, Gamma11, Epsilon, Q01, Q11
+        complex(knd), allocatable, dimension(:, :, :) :: Delta, Kappa, Gamma01, Gamma11, Epsilon, Q01, Q11, Q01Q11
         integer :: matrix_size, f, accuracy, maxm, number_of_layers
 
         logical functions_calculated
@@ -61,10 +61,10 @@ contains
         this%alpha = alpha
         this%lambda = lambda
         if (f == 1) then
-            this%ksi(1) = ab / qsqrt(ab * ab - 1)
+            this%ksi(1) = ab / qsqrt(ab * ab - 1q0)
             this%c0 = (1q0 / ab)**(1q0 / 3q0)
         else
-            this%ksi(1) = 1q0 / qsqrt(ab * ab - 1)
+            this%ksi(1) = 1q0 / qsqrt(ab * ab - 1q0)
             this%c0 = (1q0 / ab)**(2q0 / 3q0)
         endif
         this%c0 = 2q0 * PI * rv / lambda * qsqrt(ab**2q0 - 1q0) * this%c0
@@ -73,6 +73,12 @@ contains
         if (present(accuracy)) then
             this%accuracy = accuracy
         endif
+
+        !		write(*,*) 'x = ', 2q0 * PI * rv / lambda
+        !		write(*,*) 'c0 =', c0, 'c =', c
+
+        !		write(*,*) 'thismatrsize = ', this%matrix_size
+        !		write(*,*) 'matrsize = ', matrix_size
 
         arg(1) = qcos(alpha)
 
@@ -90,8 +96,11 @@ contains
         end do
 
         if (allocated(this%Delta)) then
-            deallocate(this%Delta, this%Kappa, this%Gamma01, this%Gamma11, this%Epsilon, this%Q01, this%Q11)
+            !        if (allocated(this%Delta) .and. matrix_size /= this%matrix_size) then
+            !			write(*,*) 'deallocating'
+            deallocate(this%Delta, this%Kappa, this%Gamma01, this%Gamma11, this%Epsilon, this%Q01, this%Q11, this%Q01Q11)
         endif
+        !		write(*,*) 'ready to allocate scatterer'
         if (.not. allocated(this%Delta)) then
             allocate(this%Delta(this%maxm, matrix_size, matrix_size))
             allocate(this%Kappa(this%maxm, matrix_size, matrix_size))
@@ -100,7 +109,9 @@ contains
             allocate(this%Epsilon(this%maxm, matrix_size, matrix_size))
             allocate(this%Q01(this%maxm, matrix_size, matrix_size))
             allocate(this%Q11(this%maxm, matrix_size, matrix_size))
+            allocate(this%Q01Q11(this%maxm, matrix_size, matrix_size))
         endif
+        !		write(*,*) 'allocated scatterer'
 
         this%matrix_size = matrix_size
 
@@ -118,6 +129,7 @@ contains
         complex(knd), allocatable, dimension(:, :) :: tmp, identity, result, side
         integer :: i, j, size_q, accuracy_q
 
+        !		write(*,*) 'calculating functions'
         do j = 1, this%maxm
             do i = 0, this%number_of_layers
                 call this%layer(j, i)%calculate()
@@ -127,11 +139,22 @@ contains
             call calculate_gamma(this%layer(j, 0), this%layer(j, 1), this%Gamma01(j, :, :), this%matrix_size, this%accuracy)
             call calculate_gamma(this%layer(j, 1), this%layer(j, 1), this%Gamma11(j, :, :), this%matrix_size, this%accuracy)
             call calculate_epsilon(this%layer(j, 1), this%layer(j, 1), this%Epsilon(j, :, :), this%matrix_size, this%accuracy)
+            !call calculate_omega(this%layer(j, 1), this%layer(j, 1), tmp, this%matrix_size, this%accuracy)
+            !this%Epsilon(j,:,:) = this%Epsilon(j,:,:) - tmp
+            ! write(*,*) 'j = ', j
+            ! write(*,*) 'Delta = ', this%Delta(j, 1:5, 1:5)
+            ! write(*,*) 'Kappa = ', this%Kappa(j, 1:5, 1:5)
+            ! write(*,*) 'Gamma11 = ', this%Gamma11(j, 1:5, 1:5)
+            ! write(*,*) 'Epsilon = ', this%Epsilon(j, 1:5, 1:5)
 
             size_q = 2 * this%matrix_size
+            !write(*,*) 'j = ', j, 'n = ', j + size_q - 1, 'c = ', this%layer(j, 0)%c, 'ksi = ', this%layer(j, 0)%ksi, &
+            !        'narg = ', this%layer(j, 0)%narg, 'arg = ', this%layer(j, 0)%arg
             call calculation_for_q0%set(j, j + size_q - 1, this%layer(j, 0)%c, this%layer(j, 0)%ksi + 1q0, &
                     this%layer(j, 0)%narg, this%layer(j, 0)%arg, this%layer(j, 0)%spheroidal_type)
             call calculation_for_q0%calculate()
+            !write(*,*) 'j = ', j, 'n = ', j + size_q - 1, 'c = ', this%layer(j, 1)%c, 'ksi = ', this%layer(j, 1)%ksi, &
+            !        'narg = ', this%layer(j, 1)%narg, 'arg = ', this%layer(j, 1)%arg
             call calculation_for_q1%set(j, j + size_q - 1, this%layer(j, 1)%c, this%layer(j, 1)%ksi + 1q0, &
                     this%layer(j, 1)%narg, this%layer(j, 1)%arg, this%layer(j, 1)%spheroidal_type)
             call calculation_for_q1%calculate()
@@ -144,10 +167,10 @@ contains
             call calculate_gamma(calculation_for_q1, calculation_for_q1, tmp, size_q, accuracy_q)
             call calculate_delta(calculation_for_q0, calculation_for_q1, identity, size_q, accuracy_q)
             result = matmul(identity, tmp)
-           ! write(*,*) 'must be equal 0'
-           ! write(*,*) this%Gamma01(j, :, :)
-           ! write(*,*) result(1:this%matrix_size, 1:this%matrix_size)
-           ! write(*,*)
+            !write(*,*) 'must be equal 0'
+            !write(*,*) this%Gamma01(j, :, :)
+            !write(*,*) result(1:this%matrix_size, 1:this%matrix_size)
+            !write(*,*)
 
             call get_identity_matrix(identity, size_q)
             call calculate_gamma(calculation_for_q1, calculation_for_q1, tmp, size_q, accuracy_q)
@@ -164,13 +187,45 @@ contains
             call inverse_matrix(tmp, size_q, result)
             this%Q11(j, :, :) = result(1:this%matrix_size, 1:this%matrix_size)
             side = result
+            !write(*,*) 'must be equal 1'
+            !write(*,*) this%Q11(j, :, :)
+            !write(*,*) this%Q01(j, :, :)
+            !write(*,*)
+
+            !call calculate_omega(calculation_for_q0, calculation_for_q1, tmp, size_q, accuracy_q)
+            call calculate_gamma(calculation_for_q0, calculation_for_q1, tmp, size_q, accuracy_q)
+            call calculate_delta(calculation_for_q0, calculation_for_q1, identity, size_q, accuracy_q)
+            !tmp = (this%ksi(1)**2 - this%f) * identity + this%f * tmp
+            tmp = this%ksi(1)**2 * identity - this%f * matmul(tmp, tmp)
+            call inverse_matrix(tmp, size_q, result)
+            this%Q01(j, :, :) = result(1:this%matrix_size, 1:this%matrix_size)
             result = matmul(identity, side)
+            !write(*,*) 'must be equal 2'
+            !write(*,*) this%Q01(j, :, :)
+            !write(*,*) result(1:this%matrix_size, 1:this%matrix_size)
+
+            !call calculate_omega(calculation_for_q0, calculation_for_q0, tmp, size_q, accuracy_q)
+            !call calculate_delta(calculation_for_q0, calculation_for_q0, identity, size_q, accuracy_q)
+            !tmp = (this%ksi(1)**2 - this%f) * identity + this%f * tmp
+            !call inverse_matrix(tmp, size_q, result)
+            !call calculate_delta(calculation_for_q0, calculation_for_q1, identity, size_q, accuracy_q)
+            !result = matmul(result, identity)
+            !write(*,*) 'must be equal 3'
+            !write(*,*) this%Q01(j, :, :)
+            !write(*,*) result(1:this%matrix_size, 1:this%matrix_size)
 
             this%Q01(j, :, :) = result(1:this%matrix_size, 1:this%matrix_size)
-
+            result = matmul(result, side)
+            !this%Q01Q11(j,:,:) = matmul(this%Q01(J,:,:), this%Q11(j,:,:))
+            !write(*,*) 'must be equal 4'
+            !write(*,*) this%Q01Q11(j, 40:50, 40:50)
+            this%Q01Q11(j, :, :) = result(1:this%matrix_size, 1:this%matrix_size)
+            !write(*,*) this%Q01Q11(j, 40:50, 40:50)
             deallocate(tmp, identity, result, side)
+
         end do
 
+ !       deallocate(tmp)
         this%functions_calculated = .true.
 
     end subroutine calculate_functions
@@ -188,6 +243,7 @@ contains
             deallocate(this%Epsilon)
             deallocate(this%Q01)
             deallocate(this%Q11)
+            deallocate(this%Q01Q11)
         endif
 
         if (allocated(this%layer)) then

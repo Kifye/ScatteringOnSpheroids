@@ -14,8 +14,10 @@ contains
         complex(knd) :: c
         integer :: ic
         ic = qint(cqabs(c))
-        if (ic <= 30) then
-            size_of_matrices = 2 * ic + 15
+        if (ic <= 10) then
+            size_of_matrices = 2 * ic + 35
+        elseif (ic <= 30) then
+            size_of_matrices = 2 * ic + 25
         elseif (ic <= 70) then
             size_of_matrices = 2 * ic + 5
         else
@@ -33,7 +35,7 @@ contains
         complex(knd) :: c
         integer :: ic
         ic = qint(cqabs(c))
-        number_of_d_coeff = 20 + 2 * ic
+        number_of_d_coeff = 50 + 2 * ic
     end function number_of_d_coeff
 
 end module constants

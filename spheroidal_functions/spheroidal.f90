@@ -63,7 +63,7 @@ contains
         else
             this%ksi = ksi
         endif
-        !		write(*,*) 'ksi =', this%ksi
+        !		write(*,*) 'in spheroidal ksi =', this%ksi
         this%narg = narg
 
         !  write(*,*) 'ready to allocate'

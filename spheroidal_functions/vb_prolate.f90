@@ -4695,6 +4695,10 @@ subpdi=iqint(qlog10(qabs(r2dpposi/qimag(pdsum)+dec)))
 !                       Bouwkamp eigenvalue procedure for the current
 !                       value of l
 !
+            implicit none
+            integer :: l, m, limd, ndec, maxd, lical, ioprad, ienr, idigc, itestm
+            integer :: i, idcoef, ifc, iglim, ilow, ip, ipi, irio, itest, iupp, iw1, iw15, ix, &
+                    jflagc, li, lim2, limdb, lm2, n, nc, ncon, ncsave, nlim
 !  real*16 scalars and complex*32 scalars and arrays
         real*16 dec,eigdec,eigtest
         complex*32 c,cora,corb,de,dl,eigval,enrc
@@ -4842,6 +4846,7 @@ subpdi=iqint(qlog10(qabs(r2dpposi/qimag(pdsum)+dec)))
          ' recursion match to ',i3,' digits at n = ',i3)
 !			write(*,*) 'nlim = ', nlim
           do 210 n=1,min(nlim, size(enr))
+!          do 210 n=1,nlim
           enr(n)=enrf(n)
 210       continue
 220     continue
@@ -5675,11 +5680,11 @@ subi=iqint(qlog10(qabs(sumip/dfnormi)+dec))
 20      if(m.eq.0) go to 100
         qr(m+m-1)=x
         if(m.eq.1) go to 40
-          do 30 jn=m-1,2-m,-1
+          do jn=m-1,2-m,-1
           rin=qfloat(jn)
           qr(jn+m-1)=(x*(rin+rin-1.q0)&
                -((rin-rm)/qr(jn+m)))/(rin+rm-1.q0)
-30        continue
+          end do
 40      continue
 !
 !                  m
@@ -5733,6 +5738,7 @@ subi=iqint(qlog10(qabs(sumip/dfnormi)+dec))
 !                    -m/2
 !  by (2m-1)!!(x*x-1).
 !
+
 100     q00=0.5q0*qlog((x+1.q0)/x1)
         if(m.ne.0) go to 110
         ql(1)=q00

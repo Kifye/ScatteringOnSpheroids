@@ -30,7 +30,7 @@ program test_integrals
     numarg = 1
     arg(1) = qcos(0.5q0)
     accuracy = number_of_d_coeff(c1)
-    do m = 1, 3
+    do m = 2, 2
         n = m + DSIZE - 1
         write(*,*) 'm = ', m
         call first%set(m, n, c1, ksi, numarg, arg, 1)
@@ -42,22 +42,21 @@ program test_integrals
         !    write(*,*) 'i = ', i, 'd1 = ', first%legendre(i, 0:5)
         !end do
 
-        !call calculate_delta(first, first, d1, DSIZE, accuracy)
-        !write(*,*) 'delta is identity'
-        !write(*,*) d1
+        call calculate_delta(first, first, d1, DSIZE, accuracy)
+        write(*,*) 'delta is identity'
+        write(*,*) d1
 
-        !call calculate_delta(first, second, d1, DSIZE, number_of_d_coeff(c1))
-        !call calculate_delta(second, first, d2, DSIZE, number_of_d_coeff(c1))
-        !write(*,*) 'delta is symmetric'
-        !write(*,*) d1
-        !write(*,*) transpose(d2)
+        call calculate_delta(first, second, d1, DSIZE, number_of_d_coeff(c1))
+        call calculate_delta(second, first, d2, DSIZE, number_of_d_coeff(c1))
+        write(*,*) 'delta is symmetric'
+        write(*,*) d1
+        write(*,*) transpose(d2)
 
-        !call calculate_gamma(first, second, d1, DSIZE, number_of_d_coeff(c1))
-        !call calculate_gamma(second, first, d2, DSIZE, number_of_d_coeff(c1))
-        !write(*,*) 'gamma is symmetric'
-        !write(*,*) d1
-        !write(*,*) transpose(d2)
-
+        call calculate_gamma(first, second, d1, DSIZE, number_of_d_coeff(c1))
+        call calculate_gamma(second, first, d2, DSIZE, number_of_d_coeff(c1))
+        write(*,*) 'gamma is symmetric'
+        write(*,*) d1
+        write(*,*) transpose(d2)
         call calculate_gamma(first, second, d1, DSIZE, number_of_d_coeff(c1))
         call calculate_kappa(first, second, d2, DSIZE, number_of_d_coeff(c1))
         call calculate_kappa(second, first, d3, DSIZE, number_of_d_coeff(c1))
@@ -65,19 +64,19 @@ program test_integrals
         write(*,*) 2 * d1
         write(*,*) d2 + transpose(d3)
 
-        !call calculate_omega(first, second, d1, DSIZE, accuracy)
-        !call calculate_omega(second, first, d2, DSIZE, accuracy)
-        !write(*,*) 'omega is symmetric'
-        !write(*,*) d1
-        !write(*,*) transpose(d2)
+        call calculate_omega(first, second, d1, DSIZE, accuracy)
+        call calculate_omega(second, first, d2, DSIZE, accuracy)
+        write(*,*) 'omega is symmetric'
+        write(*,*) d1
+        write(*,*) transpose(d2)
 
-        !call calculate_delta(first, second, d1, DSIZE, accuracy)
-        !call calculate_omega(first, second, d4, DSIZE, accuracy)
-        !call calculate_sigma(first, second, d2, DSIZE, accuracy)
-        !call calculate_sigma(second, first, d3, DSIZE, accuracy)
-        !write(*,*) 'sigma + sigma = 2delta - omega'
-        !write(*,*) 2 * d1 - d4
-        !write(*,*) d2 + transpose(d3)
+        call calculate_delta(first, second, d1, DSIZE, accuracy)
+        call calculate_omega(first, second, d4, DSIZE, accuracy)
+        call calculate_sigma(first, second, d2, DSIZE, accuracy)
+        call calculate_sigma(second, first, d3, DSIZE, accuracy)
+        write(*,*) 'sigma + sigma = 2delta - omega'
+        write(*,*) 2 * d1 - d4
+        write(*,*) d2 + transpose(d3)
 
         call calculate_delta(first, second, d1, DSIZE, accuracy)
         call calculate_omega(first, second, d4, DSIZE, accuracy)
@@ -104,12 +103,12 @@ program test_integrals
         write(*,*) d3 - matmul(d2, d2)
 
 
-        !call calculate_sigma(first, first, d1, DSIZE, accuracy)
-        !call calculate_kappa(first, first, d2, DSIZE, accuracy)
-        !call calculate_gamma(first, first, d3, DSIZE, accuracy)
-        !write(*,*) 'sigma = kappa * gamma'
-        !write(*,*) d1
-        !write(*,*) matmul(d2, d3)
+        call calculate_sigma(first, first, d1, DSIZE, accuracy)
+        call calculate_kappa(first, first, d2, DSIZE, accuracy)
+        call calculate_gamma(first, first, d3, DSIZE, accuracy)
+        write(*,*) 'sigma = kappa * gamma'
+        write(*,*) d1
+        write(*,*) matmul(d2, d3)
 
         call calculate_delta(first, second, d1, DSIZE, accuracy)
         call calculate_gamma(second, second, d2, DSIZE, accuracy)

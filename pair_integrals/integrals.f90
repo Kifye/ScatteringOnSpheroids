@@ -44,10 +44,10 @@ contains
                 if (mod(abs(n - l), 2) == 1) then
                     cycle
                 endif
-                ! write(*,*) 'n = ', n, 'l = ', l
-                ! write(*,*) 'leg1 = ', first%legendre(n, 0:5)
-                ! write(*,*) 'leg2 = ', second%legendre(l, 0:5)
-                ! write(*,*)
+                !write(*,*) 'n = ', n, 'l = ', l
+                !write(*,*) 'leg1 = ', first%legendre(n, 0:5)
+                !write(*,*) 'leg2 = ', second%legendre(l, 0:5)
+                !write(*,*)
                 do r = mod(n + 1, 2), accuracy, 2
                     Delta(n, l) = Delta(n, l) + first%legendre(n, r) * second%legendre(l, r) * &
                             common_multiplier(r);

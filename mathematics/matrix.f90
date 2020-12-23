@@ -2,10 +2,9 @@ module matrix
     use regime
     use elemfunc
     implicit none
-    private
 
-    public :: solve_system, inverse_matrix, multiply_by_diag_left, multiply_by_diag_right, &
-            check_symmetric, check_symmetric_result, get_identity_matrix
+    private quick_inverse_matrix
+
 contains
 
     !   Swaps rows i and j of the matrix A nxn
@@ -155,6 +154,58 @@ contains
 
     end subroutine inverse_matrix
 
+    subroutine quick_inverse_matrix(A, n, res)
+        integer :: n, i, j, k
+        complex(knd) :: A(n, n), L(n, n), U(n, n), P(n, n), res(n, n), res_low(n), det
+
+        det = 1q0
+
+        res = A
+
+        do k = 1, n
+            !write(*,*) 'k = ', k
+            if (abs(res(k, k)) < 1q-20) then
+                write(*,*) 'k = ', k, 'res(k,k) = ', res(k,k)
+                exit
+            end if
+
+            det = det * res(k,k)
+
+            do i = 1, n
+                if (i /= k) then
+                    res(i, k) = -res(i, k) / res(k, k)
+!                    res(k, i) = res(k, i) / res(k, k)
+                end if
+            end do
+
+            !write(*,*) 'res1 = ', res
+
+            do i = 1, n
+                do j = 1, n
+                    if (i /= k .and. j /= k) then
+                        res(i, j) = res(i, j) + res(k, j) * res(i, k)
+                    end if
+                end do
+            end do
+
+            !write(*,*) 'res2 = ', res
+
+            do i = 1, n
+                if (i /= k) then
+                    res(k, i) = res(k, i) / res(k, k)
+                end if
+            end do
+
+            !write(*,*) 'res3 = ', res
+
+            res(k, k) = 1q0 / res(k, k)
+            !write(*,*)
+        enddo
+
+        !write(*,*) 'det = ', det
+
+    end subroutine quick_inverse_matrix
+
     subroutine multiply_by_diag_right(A, n, diag_matr)
         complex(knd) A(n, n), diag_matr(n)
         integer :: n, i, j
@@ -224,4 +275,15 @@ contains
             A(i, i) = qcmplx(1q0, 0q0)
         end do
     end subroutine get_identity_matrix
+
+    subroutine get_full_matrix_from_diag(R, n, A)
+        integer :: n, i
+        complex(knd) :: R(n), A(n, n)
+
+        A = 0
+        do i = 1, n
+            A(i, i) = R(i)
+        end do
+    end subroutine get_full_matrix_from_diag
+
 end module matrix

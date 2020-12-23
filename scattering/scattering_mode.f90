@@ -21,7 +21,7 @@ module scattering_mode
     contains
         procedure, public, non_overridable :: get_tmatrix, get_solution
         procedure, public :: set => set_scattering_mode
-        procedure, private, non_overridable :: calculate_solution, calculate_tmatrix
+        procedure, private :: calculate_solution, calculate_tmatrix
         procedure(calculate_parameters), private, deferred :: calculate_initial, calculate_matrices
         procedure(get_parameters), private, deferred :: get_extinction, get_scattering
         procedure, public :: delete_mode => delete_scattering_mode
@@ -248,19 +248,19 @@ contains
     end subroutine calculate_axisymmetric_matrices
 
     function get_part_11(f, ksi, eps, mu, left_multiplier, right_multiplier, &
-            Delta, Q01, Q11, Epsilon, matrix_size) result(res)
+            Delta, Q01, Q11, Q01Q11, Epsilon, matrix_size) result(res)
         complex(knd) :: eps(0:1), mu(0:1)
         real(knd) :: ksi
         integer :: matrix_size, f
         complex(knd) :: left_multiplier(matrix_size), right_multiplier(matrix_size), &
                 adder(matrix_size, matrix_size), Delta(matrix_size, matrix_size), Q01(matrix_size, matrix_size), &
                 Q11(matrix_size, matrix_size), Epsilon(matrix_size, matrix_size), identity(matrix_size, matrix_size), &
-                res(matrix_size, matrix_size)
+                res(matrix_size, matrix_size), Q01Q11(matrix_size, matrix_size)
 
         call get_identity_matrix(identity, matrix_size)
 
         res = -(eps(1) / eps(0) - mu(0) / mu(1)) * f * ksi / (ksi ** 2 - f) * matmul(Q01, Epsilon) - &
-                (eps(1) / eps(0) - 1q0) * ksi * matmul(Q01, identity - 2 * ksi**2 * Q11)
+                (eps(1) / eps(0) - 1q0) * ksi * (Q01 - 2q0 * ksi**2 * Q01Q11)
 
         !write(*, *) 'res = ', res
         !write(*, *) 'res = ', transpose(res)
@@ -270,14 +270,14 @@ contains
         call multiply_by_diag_right(adder, matrix_size, right_multiplier)
         res = res + adder
 
-        adder = Delta + (eps(1) / eps(0) - 1q0) * ksi ** 2 * Q01
+        adder = Delta + (eps(1) / eps(0) - 1q0) * ksi**2 * Q01
         call multiply_by_diag_left(adder, matrix_size, left_multiplier)
         res = res + adder
 
     end function get_part_11
 
     function get_part_12(f, ksi, eps, mu, left_multiplier, right_multiplier, &
-            Delta, Q01, Q11, Kappa, Gamma11, matrix_size) result(result)
+            Delta, Q01, Q11, Q01Q11, Kappa, Gamma11, matrix_size) result(result)
 
         complex(knd) :: eps(0:1), mu(0:1), identity(matrix_size, matrix_size)
         real(knd) :: ksi
@@ -285,13 +285,13 @@ contains
         complex(knd) :: left_multiplier(matrix_size), right_multiplier(matrix_size), &
                 adder(matrix_size, matrix_size), Delta(matrix_size, matrix_size), Q01(matrix_size, matrix_size), &
                 Q11(matrix_size, matrix_size), Kappa(matrix_size, matrix_size), Gamma11(matrix_size, matrix_size), &
-                result(matrix_size, matrix_size)
+                result(matrix_size, matrix_size), Q01Q11(matrix_size, matrix_size)
 
         call get_identity_matrix(identity, matrix_size)
 
         result = -(eps(1) / eps(0) - mu(0) / mu(1)) * f / (ksi ** 2 - f) * &
                 (matmul((ksi**2 * Q01 - Delta), Kappa) + matmul(Delta, Gamma11)) + &
-                (eps(1) / eps(0) - 1q0) * f * ksi**2 * 2q0 * matmul(matmul(Q01, Q11), Gamma11)
+                (eps(1) / eps(0) - 1q0) * f * ksi**2 * 2q0 * matmul(Q01Q11, Gamma11)
         adder = (mu(0) / mu(1) - 1q0) * f * ksi * matmul(Q01, Gamma11)
         call multiply_by_diag_right(adder, matrix_size, right_multiplier)
         result = result + adder
@@ -303,7 +303,7 @@ contains
     end function get_part_12
 
     function get_part_21(f, ksi, eps, mu, left_multiplier, right_multiplier, &
-            Delta, Q01, Q11, Kappa, Gamma11, matrix_size) result(result)
+            Delta, Q01, Q11, Q01Q11, Kappa, Gamma11, matrix_size) result(result)
 
         complex(knd) :: eps(0:1), mu(0:1)
         real(knd) :: ksi
@@ -311,10 +311,10 @@ contains
         complex(knd) :: left_multiplier(matrix_size), right_multiplier(matrix_size), &
                 adder(matrix_size, matrix_size), Delta(matrix_size, matrix_size), Q01(matrix_size, matrix_size), &
                 Q11(matrix_size, matrix_size), Kappa(matrix_size, matrix_size), Gamma11(matrix_size, matrix_size), &
-                result(matrix_size, matrix_size)
+                result(matrix_size, matrix_size), Q01Q11(matrix_size, matrix_size)
 
         result = (eps(1) / eps(0) - mu(0) / mu(1)) * ksi**2 / (ksi ** 2 - f) * matmul(Q01, Kappa) - &
-                (eps(1) / eps(0) - 1q0) * ksi**2 * 2q0 * matmul(matmul(Q01, Q11), Gamma11)
+                (eps(1) / eps(0) - 1q0) * ksi**2 * 2q0 * matmul(Q01Q11, Gamma11)
         adder = -(mu(0) / mu(1) - 1q0) * ksi * matmul(Q01, Gamma11)
         call multiply_by_diag_right(adder, matrix_size, right_multiplier)
         result = result + adder
@@ -326,32 +326,32 @@ contains
     end function get_part_21
 
     function get_part_22(f, ksi, eps, mu, left_multiplier, right_multiplier, &
-            Delta, Q01, Q11, Epsilon, matrix_size) result(result)
+            Delta, Q01, Q11, Q01Q11, Epsilon, matrix_size) result(result)
         complex(knd) :: eps(0:1), mu(0:1)
         real(knd) :: ksi
         integer :: matrix_size, f
         complex(knd) :: left_multiplier(matrix_size), right_multiplier(matrix_size), &
                 adder(matrix_size, matrix_size), Delta(matrix_size, matrix_size), Q01(matrix_size, matrix_size), &
                 Q11(matrix_size, matrix_size), Epsilon(matrix_size, matrix_size), identity(matrix_size, matrix_size), &
-                result(matrix_size, matrix_size)
+                result(matrix_size, matrix_size), Q01Q11(matrix_size, matrix_size)
 
         call get_identity_matrix(identity, matrix_size)
 
         result = (eps(1) / eps(0) - mu(0) / mu(1)) * ksi / (ksi ** 2 - f) * (f * matmul(Q01, Epsilon) + Delta) + &
-                (eps(1) / eps(0) - 1q0) * ksi * matmul(Q01, identity - 2 * ksi**2 * Q11)
+                (eps(1) / eps(0) - 1q0) * ksi * (Q01 - 2q0 * ksi**2 * Q01Q11)
 
         adder = -(mu(0) / mu(1) - 1q0) * ksi**2 * Q01 - Delta
         call multiply_by_diag_right(adder, matrix_size, right_multiplier)
         result = result + adder
 
-        adder = eps(1) / eps(0) * Delta - (eps(1) / eps(0) - 1q0) * ksi ** 2 * Q01
+        adder = eps(1) / eps(0) * Delta - (eps(1) / eps(0) - 1q0) * ksi**2 * Q01
         call multiply_by_diag_left(adder, matrix_size, left_multiplier)
         result = result + adder
 
     end function get_part_22
 
     subroutine set_full_matrix(f, ksi, eps, mu, first_multiplier, left_multiplier, right_multiplier, &
-            Delta, Q01, Q11, Kappa, Gamma11, Epsilon, matrix_size, result)
+            Delta, Q01, Q11, Q01Q11, Kappa, Gamma11, Epsilon, matrix_size, result)
 
         complex(knd) :: eps(0:1), mu(0:1)
         real(knd) :: ksi
@@ -359,7 +359,8 @@ contains
         complex(knd) :: first_multiplier(matrix_size), left_multiplier(matrix_size), right_multiplier(matrix_size), &
                 adder(matrix_size, matrix_size), Delta(matrix_size, matrix_size), Q01(matrix_size, matrix_size), &
                 Q11(matrix_size, matrix_size), Kappa(matrix_size, matrix_size), Gamma11(matrix_size, matrix_size), &
-                Epsilon(matrix_size, matrix_size), result(2 * matrix_size, 2 * matrix_size)
+                Epsilon(matrix_size, matrix_size), result(2 * matrix_size, 2 * matrix_size), &
+                Q01Q11(matrix_size, matrix_size)
 
         !write(*,*) 'Delta = ', Delta
         !write(*,*) 'Gamma = ', Gamma11
@@ -370,13 +371,17 @@ contains
         !write(*,*)
         ! write(*,*) 'ms = ', matrix_size
         result(1:matrix_size, 1:matrix_size) = &
-                get_part_11(f, ksi, eps, mu, left_multiplier, right_multiplier, Delta, Q01, Q11, Epsilon, matrix_size)
+                get_part_11(f, ksi, eps, mu, left_multiplier, right_multiplier, Delta, Q01, Q11, Q01Q11, &
+                        Epsilon, matrix_size)
         result(1:matrix_size, (matrix_size + 1):(2 * matrix_size)) = &
-                get_part_12(f, ksi, eps, mu, left_multiplier, right_multiplier, Delta, Q01, Q11, Kappa, Gamma11, matrix_size)
+                get_part_12(f, ksi, eps, mu, left_multiplier, right_multiplier, Delta, Q01, Q11, Q01Q11, &
+                        Kappa, Gamma11, matrix_size)
         result((matrix_size + 1):(2 * matrix_size), 1:matrix_size) = &
-                get_part_21(f, ksi, eps, mu, left_multiplier, right_multiplier, Delta, Q01, Q11, Kappa, Gamma11, matrix_size)
+                get_part_21(f, ksi, eps, mu, left_multiplier, right_multiplier, Delta, Q01, Q11, Q01Q11, &
+                        Kappa, Gamma11, matrix_size)
         result((matrix_size + 1):(2 * matrix_size), (matrix_size + 1):(2 * matrix_size)) = &
-                get_part_22(f, ksi, eps, mu, left_multiplier, right_multiplier, Delta, Q01, Q11, Epsilon, matrix_size)
+                get_part_22(f, ksi, eps, mu, left_multiplier, right_multiplier, Delta, Q01, Q11, Q01Q11, &
+                        Epsilon, matrix_size)
         ! write(*,*) 'befor matr = ', result(1:5,1:5)
         do i = 0, 1
             do j = 0, 1
@@ -430,7 +435,7 @@ contains
         k1 = 2 * PI / this%scatterer%lambda
         do m = 1, this%maxm
             c1 = this%scatterer%layer(m, 0)%c
-            write(*, *) 'k1 = ', k1, ' c1 = ', c1
+            !write(*, *) 'k1 = ', k1, ' c1 = ', c1
             !write(*,*) 'check_a11'
             !do j = 1, 3
             !    write(*,*) this%A31(1, j, 1:3)
@@ -446,11 +451,13 @@ contains
             call set_full_matrix(this%scatterer%f, this%scatterer%ksi(1), eps, mu, &
                     W1, R11, R12, &
                     this%scatterer%Delta(m, :, :), this%scatterer%Q01(m, :, :), this%scatterer%Q11(m, :, :), &
+                    this%scatterer%Q01Q11(m, :, :), &
                     this%scatterer%Kappa(m, :, :), this%scatterer%Gamma11(m, :, :), this%scatterer%Epsilon(m, :, :), &
                     n, this%A11(m, :, :))
             call set_full_matrix(this%scatterer%f, this%scatterer%ksi(1), eps, mu, &
                     W1, R31, R12, &
                     this%scatterer%Delta(m, :, :), this%scatterer%Q01(m, :, :), this%scatterer%Q11(m, :, :), &
+                    this%scatterer%Q01Q11(m, :, :), &
                     this%scatterer%Kappa(m, :, :), this%scatterer%Gamma11(m, :, :), this%scatterer%Epsilon(m, :, :), &
                     n, this%A31(m, :, :))
 
@@ -523,7 +530,7 @@ contains
         k1 = 2 * PI / this%scatterer%lambda
         do m = 1, this%maxm
             do i = 1, this%matrix_size / 2
-                this%initial(m, i) = 4q0 * (qcmplx(0q0, 1q0) ** (i - 1)) / k1 * &
+                this%initial(m, i) = 4q0 * (qcmplx(0q0, 1q0) ** (i + m - 2)) / k1 * &
                         this%scatterer%layer(m, 0)%s1(i, 1) / qsin(this%scatterer%alpha)
             enddo
         end do
@@ -548,14 +555,16 @@ contains
     subroutine calculate_nonaxisymmetric_initial_tm(this)
         class(NonAxisymmetricTM) :: this
         integer :: i, m
+        complex(knd) :: k1
 
         this%initial = 0
+        k1 = 2 * PI / this%scatterer%lambda
 
         do m = 1, this%maxm
             do i = 1, this%matrix_size / 2
-                this%initial(m, i) = -4q0 * (qcmplx(0q0, 1q0) ** (i - 1)) * &
+                this%initial(m, i) = -4q0 * (qcmplx(0q0, 1q0) ** (i + m - 2)) * &
                         cqsqrt(this%scatterer%eps(0) / this%scatterer%mu(0)) * &
-                        this%scatterer%layer(m, 0)%s1(i, 1) / qsin(this%scatterer%alpha) * this%scatterer%layer(m, 0)%r1(i)
+                        this%scatterer%layer(m, 0)%s1(i, 1) / qsin(this%scatterer%alpha) / k1 !* this%scatterer%layer(m, 0)%r1(i)
             enddo
         end do
 
@@ -653,8 +662,8 @@ contains
 
         ideg = qcmplx(0q0, -1q0)
 
-        write(*, *) 'maxm = ', this%maxm
-        write(*, *) 'ms = ', this%matrix_size
+        !write(*, *) 'maxm = ', this%maxm
+        !write(*, *) 'ms = ', this%matrix_size
 
         do m = 1, this%maxm
             !write(*,*) 'm = ', m
@@ -662,14 +671,14 @@ contains
             !write(*,*) 'ext = ', ext
             !write(*,*) 's1 = ', this%scatterer%layer(m, 0)%s1(:, 1)
             !write(*,*) 's1d = ', this%scatterer%layer(m, 0)%s1d(:, 1)
-            !write(*,*)
+            !write(*,*) 'ms = ', this%matrix_size
             do i = 1, this%matrix_size / 2
                 !write(*,*) i, this%solution(m, i), this%scatterer%layer(m, 0)%s1(i, 1), &
                 !        this%solution(m, i + this%matrix_size / 2), this%scatterer%layer(m, 0)%s1d(i, 1), &
                 !        this%scatterer%layer(m, 0)%r3(i)
                 !write(*,*) 'dext = ', ideg**(i - 1) * (k1 * this%solution(m, i) * this%scatterer%layer(m, 0)%s1(i, 1) - &
                 !        this%solution(m, i + this%matrix_size / 2) * ideg * this%scatterer%layer(m, 0)%s1d(i, 1))
-                ext = ext + real(ideg**(i - 1) * (k1 * this%solution(m, i) * this%scatterer%layer(m, 0)%s1(i, 1) - &
+                ext = ext + real(ideg**(i + m - 2) * (k1 * this%solution(m, i) * this%scatterer%layer(m, 0)%s1(i, 1) - &
                         this%solution(m, i + this%matrix_size / 2) * ideg * this%scatterer%layer(m, 0)%s1d(i, 1)), knd)
             enddo
         end do
@@ -720,8 +729,8 @@ contains
                     sca = sca + real(ideg**(j - i) * (&
                     k1**2 * this%solution(m, i) * conjg(this%solution(m, j)) * Omega(i, j) + &
                     ideg * k1 * (&
-                    this%solution(m, i + this%matrix_size / 2) * conjg(this%solution(m, j)) * Kappa(i, j) - &
-                    conjg(this%solution(m, j + this%matrix_size / 2)) * this%solution(m, i) * Kappa(j, i)) + &
+                    this%solution(m, i + this%matrix_size / 2) * conjg(this%solution(m, j)) * Kappa(j, i) - &
+                    conjg(this%solution(m, j + this%matrix_size / 2)) * this%solution(m, i) * Kappa(i, j)) + &
                     this%solution(m, i + this%matrix_size / 2) * conjg(this%solution(m, j + this%matrix_size / 2)) * &
                     Tau(i, j)), knd)
                 end do
