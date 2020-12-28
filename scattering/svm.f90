@@ -30,7 +30,8 @@ contains
         endif
 
         n = this%matrix_size / 2
-        k1 = 2 * PI / this%scatterer%lambda
+        write(*,*) 'n = ', n
+        k1 = 2q0 * PI / this%scatterer%lambda
 
         do i = 1, this%maxm
             c1 = this%scatterer%layer(i, 0)%c
@@ -50,6 +51,7 @@ contains
             !    write(*,*) this%A31inv(i,j,:)
             !end do
             this%tmatr(i, :, :) = -matmul(this%A31inv(i, :, :), this%A11(i, :, :))
+            write(*,*) 'svm  = ', this%tmatr(i, 1:10, 1:10)
             !write(*,*) 'this%tmatr = '
             !do j = 1, this%matrix_size
             !    write(*,*) this%tmatr(i,j,:)
@@ -80,6 +82,15 @@ contains
                 result(matrix_size, matrix_size)
 
         !write(*,*) 'ksi = ', ksi
+        !write(*,*) 'R2 = '
+        !do i = 1, matrix_size
+        !    write(*,*) R2(i,:)
+        !end do
+        !write(*,*) 'R1 = '
+        !do i = 1, matrix_size
+        !    write(*,*) R1(i,:)
+        !end do
+
         result = ksi * (R2 - R1)
         !write(*,*) 'result = '
         !do i = 1, matrix_size
@@ -114,6 +125,7 @@ contains
                 Gamma(matrix_size, matrix_size), Kappa(matrix_size, matrix_size), &
                 result(matrix_size, matrix_size)
 
+        !write(*,*) 'eps = ', eps(1)
         result = matmul(Gamma, 1q0 / eps(1) * R2 - R1) - (1q0 - 1q0 / eps(1)) * ksi / (ksi**2 - f) * Kappa
         !write(*,*) 'result = '
         !do i = 1, matrix_size
@@ -154,10 +166,26 @@ contains
 
         call get_full_matrix_from_diag(R1diag, scat%matrix_size, R1)
 
+        write(*,*) 'R1 = ', R1(1:10, 1:10)
+
         call get_full_matrix_from_diag(R2diag, scat%matrix_size, R2)
+        write(*,*) 'R2 = ', R2(1:10, 1:10)
         call calculate_delta(scat%layer(m, 1), scat%layer(m, 0), Delta, scat%matrix_size, scat%accuracy)
+
+        !write(*,*) 'Delta1 = ', Delta(1:10, 1:10)
         call inverse_matrix(Delta, scat%matrix_size, tmp)
-        R2 = matmul(tmp, matmul(R2, Delta))
+        !R2 = matmul(tmp, matmul(R2, Delta))
+
+        !write(*,*) 'invers = ', tmp(1:10, 1:10)
+        !tmp = matmul(tmp, Delta)
+        !write(*,*) 'check  = ', tmp(1:10, 1:10)
+        R2 = matmul(R2, Delta)
+        call calculate_delta(scat%layer(m, 0), scat%layer(m, 1), Delta, scat%matrix_size, scat%accuracy)
+        !write(*,*) 'Delta2 = ', Delta(1:10, 1:10)
+        !write(*,*)
+        R2 = matmul(Delta, R2)
+
+        write(*,*) 'acc = ', scat%accuracy
 
         call calculate_kappa(scat%layer(m, 0), scat%layer(m, 0), Kappa, scat%matrix_size, scat%accuracy)
         call calculate_gamma(scat%layer(m, 0), scat%layer(m, 0), Gamma, scat%matrix_size, scat%accuracy)
@@ -180,7 +208,7 @@ contains
         !write(*,*) 'Q01 = ', Q01
         !write(*,*) 'Q11 = ', Q11
         !write(*,*)
-        ! write(*,*) 'ms = ', matrix_size
+        !write(*,*) 'ms = ', scat%matrix_size
         result(1:scat%matrix_size, 1:scat%matrix_size) = &
                 get_part_11(scat%f, scat%ksi(1), scat%eps, scat%mu, R2, R1, scat%matrix_size)
         result(1:scat%matrix_size, (scat%matrix_size + 1):(2 * scat%matrix_size)) = &
@@ -203,6 +231,10 @@ contains
         endif
 
         allocate(R0(this%scatterer%matrix_size), R1(this%scatterer%matrix_size), R2(this%scatterer%matrix_size))
+
+        this%A11 = 0
+        this%A31 = 0
+        this%A31inv = 0
 
         do m = 1, this%maxm
 

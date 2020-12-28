@@ -21,15 +21,15 @@ program test_ext_sca_full
             tmatr_rel_te, tmatr_rel_tm
     integer :: matrix_size, f, maxm, i
     type(ScatteringCalculation) :: scatter
-    eps(0:1) = (/qcmplx(1q0, 0q0), qcmplx(1.4q0**2, 0q0)/)
+    eps(0:1) = (/qcmplx(1q0, 0q0), qcmplx(1.7q0, 0.7q0)**2/)
     mu(0:1) = (/qcmplx(1q0, 0q0), qcmplx(1q0, 0q0)/)
 
     ! nm
     lambda = 1q0
     rv = 5q0
-    ab = 2q0
+    ab = 1.1q0
 
-    alpha = 0.0001q0
+    alpha = PI / 2q0
 
     !	write(*,*) 'start'
 
@@ -62,7 +62,8 @@ program test_ext_sca_full
             'te_tmatr_abs', 'te_tmatr_rel', 'te_ext', 'te_sca', 'te_abs', 'te_rel', &
             'tm_tmatr_abs', 'tm_tmatr_rel', 'tm_ext', 'tm_sca', 'tm_abs', 'tm_rel'
 
-    do rv = 5 * dr, 10q0 * dr, 10q0 * dr
+    dr = 3.0q0 / 2q0 / PI
+    do rv = 1q0 * dr, 2q0 * dr, 10q0 * dr
         if (f == 1) then
             c0 = (1q0 / ab)**(1q0 / 3q0)
         else
@@ -122,6 +123,11 @@ program test_ext_sca_full
         100	FORMAT(' ', 3F8.4,' ', 2I6, ' ', 12E25.15)
 
         !write(*,*) 'rel = ', ext_te / sca_te
+
+        ext_te = ext_te * qsqrt(ab**2 * qsin(alpha)**2 + qcos(alpha)**2) / ab ** (2q0 / 3q0)
+        ext_tm = ext_tm * qsqrt(ab**2 * qsin(alpha)**2 + qcos(alpha)**2) / ab ** (2q0 / 3q0)
+        sca_te = sca_te * qsqrt(ab**2 * qsin(alpha)**2 + qcos(alpha)**2) / ab ** (2q0 / 3q0)
+        sca_tm = sca_tm * qsqrt(ab**2 * qsin(alpha)**2 + qcos(alpha)**2) / ab ** (2q0 / 3q0)
 
         write(*,100) rv, 2q0 * PI * rv / lambda, cqabs(c0), matrix_size, number_of_d_coeff(c0), &
                 tmatr_abs_te, tmatr_rel_te, &

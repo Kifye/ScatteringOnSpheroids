@@ -53,7 +53,7 @@ program test_ext_sca_c
         dr = lambda / 2q0 / PI / qsqrt(ab**2 - 1) * ab**(2q0 / 3q0)
     endif
 
-    maxm = 5
+    maxm = 1
     write(*,*) 'maxm = ', maxm
 
     105	FORMAT('#', 3A8,' ', 2A6, ' ', 12A25)

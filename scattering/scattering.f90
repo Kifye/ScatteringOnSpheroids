@@ -6,6 +6,7 @@ module scattering
     use integrals
     use spheroidal
     use elemfunc
+    use wavelength_point
 
     implicit none
     private
@@ -13,13 +14,13 @@ module scattering
     type, public :: Scatterer
 
         type(SpheroidalCalculation), allocatable, dimension(:, :) :: layer
+        type(WavelengthPoint) :: calculation_point
 
-        real(knd) :: alpha, common_factor, lambda
+        real(knd) :: alpha, common_factor
         complex(knd) :: c0
 
         ! dependent on layers
         real(knd), allocatable, dimension(:) :: ksi   !  1..number_of_layers
-        complex(knd), allocatable, dimension(:) :: eps, mu  !  0..number_of_layers
 
         complex(knd), allocatable, dimension(:, :, :) :: Delta, Kappa, Gamma01, Gamma11, Epsilon, Q01, Q11, Q01Q11
         integer :: matrix_size, f, accuracy, maxm, number_of_layers
@@ -48,18 +49,17 @@ contains
 
         ! set arrays dependant on number of layers
         ! layers, ksi, eps and mu are always allocated and deallocated together
+
+        call this%calculation_point%initialize(lambda, number_of_layers, eps, mu)
         if (allocated(this%ksi) .and. number_of_layers /= this%number_of_layers) then
-            deallocate(this%ksi, this%eps, this%mu)
+            deallocate(this%ksi)
         end if
         if (.not. allocated(this%ksi)) then
-            allocate(this%ksi(1:number_of_layers), this%eps(0:number_of_layers), this%mu(0:number_of_layers))
+            allocate(this%ksi(1:number_of_layers))
         end if
         this%number_of_layers = number_of_layers
-        this%mu = mu
-        this%eps = eps
 
         this%alpha = alpha
-        this%lambda = lambda
         if (f == 1) then
             this%ksi(1) = ab / qsqrt(ab * ab - 1q0)
             this%c0 = (1q0 / ab)**(1q0 / 3q0)
@@ -250,7 +250,7 @@ contains
             deallocate(this%layer)
         endif
         if (allocated(this%ksi)) then
-            deallocate(this%ksi, this%eps, this%mu)
+            deallocate(this%ksi)
         end if
     end subroutine delete_scatterer
 end module scattering

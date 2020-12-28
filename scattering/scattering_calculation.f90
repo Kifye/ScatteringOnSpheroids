@@ -12,11 +12,12 @@ module scattering_calculation
 
     type, public :: ScatteringCalculation
         type(Scatterer) :: scatterer
+        type(WavelengthPoint) :: calculation_point
         type(AxisymmetricTE) :: symte
         type(AxisymmetricTM) :: symtm
         type(NonAxisymmetricTE) :: nonsymte
         type(NonAxisymmetricTM) :: nonsymtm
-        integer :: matrix_size
+        integer :: matrix_size, min_m, max_m
     contains
         procedure, public :: set, get_tmatrix, get_solution, get_extinction, get_scattering
         final :: delete_scattering
@@ -37,6 +38,8 @@ contains
         else
             call this%scatterer%set(f, rv, lambda, ab, alpha, eps, mu, matrix_size, number_of_layers, maxm)
         end if
+
+        call this%calculation_point%initialize(lambda, number_of_layers, eps, mu)
 
         this%matrix_size = matrix_size
 

@@ -12,6 +12,7 @@ module scattering_mode
 
     type, public, abstract :: ScatteringMode
         type(Scatterer), pointer :: scatterer
+        type(WavelengthPoint), pointer :: calculation_point
         complex(knd), allocatable, dimension(:, :) :: initial, solution  !  [1..(1 or maxm)][1..matrix_size]
         complex(knd), allocatable, dimension(:, :, :) :: tmatr, A11, A31, A31inv   !  [1..(1 or maxm)][1..matrix_size][1..matrix_size]
         integer :: matrix_size, maxm
@@ -84,13 +85,16 @@ module scattering_mode
 
 contains
 
-    subroutine set_scattering_mode(this, scat, matrix_size, maxm)
+    subroutine set_scattering_mode(this, scat, calculation_point, matrix_size, maxm)
 
         class(ScatteringMode) :: this
         type(Scatterer), target :: scat
+        type(WavelengthPoint), target :: calculation_point
         integer :: matrix_size, maxm
 
         this%scatterer => scat
+
+        this%calculation_point => calculation_point
 
         if (allocated(this%initial) .and. (matrix_size /= this%matrix_size .or. maxm /= this%maxm)) then
             deallocate(this%initial, this%tmatr, this%solution, this%A11, this%A31, this%A31inv)
@@ -183,10 +187,10 @@ contains
             call this%scatterer%calculate_functions()
         endif
 
-        mu = this%scatterer%mu
+        mu = this%scatterer%calculation_point%mu
         select type (this)
         class is (AxisymmetricTM)
-            mu = this%scatterer%eps
+            mu = this%scatterer%calculation_point%eps
         end select
 
         R11 = this%scatterer%layer(1, 0)%r1d / this%scatterer%layer(1, 0)%r1
@@ -415,12 +419,12 @@ contains
             call this%scatterer%calculate_functions()
         endif
 
-        eps = this%scatterer%eps
-        mu = this%scatterer%mu
+        eps = this%scatterer%calculation_point%eps
+        mu = this%scatterer%calculation_point%mu
         select type (this)
         class is (NonAxisymmetricTM)
-            mu = this%scatterer%eps
-            eps = this%scatterer%mu
+            mu = this%scatterer%calculation_point%eps
+            eps = this%scatterer%calculation_point%mu
         end select
 
         this%A11 = 0
@@ -432,7 +436,7 @@ contains
         !end do
         !write(*,*)
 
-        k1 = 2 * PI / this%scatterer%lambda
+        k1 = this%scatterer%calculation_point%k
         do m = 1, this%maxm
             c1 = this%scatterer%layer(m, 0)%c
             !write(*, *) 'k1 = ', k1, ' c1 = ', c1
@@ -466,6 +470,10 @@ contains
             solution_corrector(1:n) = 1q0 / (this%scatterer%layer(m, 0)%r3 * k1)
             solution_corrector((n + 1):(2 * n)) = 1q0 / (this%scatterer%layer(m, 0)%r3 * c1)
 
+            call inverse_matrix(this%A31(m,:,:), this%matrix_size, this%A31inv(m,:,:))
+            this%tmatr(m,:,:) = -matmul(this%A11(m,:,:), this%A31inv(m,:,:))
+            !write(*,*) 'ebcm = ', this%tmatr(m,1:10,1:10)
+
             !write(*,*) 'sizes:', size(initial_corrector), size(this%scatterer%layer(m, 0)%r1), size(this%A11(m,1,:))
             call multiply_by_diag_left(this%A31(m, :, :), this%matrix_size, initial_corrector)
             call multiply_by_diag_left(this%A11(m, :, :), this%matrix_size, solution_corrector)
@@ -494,6 +502,7 @@ contains
         do i = 1, this%maxm
             call inverse_matrix(this%A31(i, :, :), this%matrix_size, this%A31inv(i, :, :))
             this%tmatr(i, :, :) = -matmul(this%A11(i, :, :), this%A31inv(i, :, :))
+            !this%tmatr(i, :, :) = transpose(this%tmatr(i, :, :))
         enddo
 
         this%tmatrix_calculated = .true.
@@ -527,7 +536,7 @@ contains
         !        write(*,*) 'r1 = ', this%scatterer%layer(1, 0)%r1(1)
         !        write(*,*) 's11 = ', this%scatterer%layer(1, 0)%s1(1, 1)
         this%initial = 0
-        k1 = 2 * PI / this%scatterer%lambda
+        k1 = this%scatterer%calculation_point%k
         do m = 1, this%maxm
             do i = 1, this%matrix_size / 2
                 this%initial(m, i) = 4q0 * (qcmplx(0q0, 1q0) ** (i + m - 2)) / k1 * &
@@ -545,8 +554,9 @@ contains
         this%initial = 0
 
         do i = 1, this%matrix_size
-            this%initial(1, i) = 2q0 * cqsqrt(this%scatterer%eps(0) / this%scatterer%mu(0)) * (qcmplx(0q0, 1q0) ** i) * &
-                    this%scatterer%layer(1, 0)%s1(i, 1)
+            this%initial(1, i) = 2q0 * &
+                    cqsqrt(this%scatterer%calculation_point%eps(0) / this%scatterer%calculation_point%mu(0)) * &
+                    (qcmplx(0q0, 1q0) ** i) * this%scatterer%layer(1, 0)%s1(i, 1)
         enddo
 
         this%initial_calculated = .true.
@@ -558,12 +568,13 @@ contains
         complex(knd) :: k1
 
         this%initial = 0
-        k1 = 2 * PI / this%scatterer%lambda
+        k1 = this%scatterer%calculation_point%k
 
+        !write(*,*) 'mult = ', cqsqrt(this%scatterer%eps(0) / this%scatterer%mu(0))
         do m = 1, this%maxm
             do i = 1, this%matrix_size / 2
                 this%initial(m, i) = -4q0 * (qcmplx(0q0, 1q0) ** (i + m - 2)) * &
-                        cqsqrt(this%scatterer%eps(0) / this%scatterer%mu(0)) * &
+                        cqsqrt(this%scatterer%calculation_point%eps(0) / this%scatterer%calculation_point%mu(0)) * &
                         this%scatterer%layer(m, 0)%s1(i, 1) / qsin(this%scatterer%alpha) / k1 !* this%scatterer%layer(m, 0)%r1(i)
             enddo
         end do
@@ -658,7 +669,7 @@ contains
         endif
 
         ext = 0q0
-        k1 = 2 * PI / this%scatterer%lambda
+        k1 = this%scatterer%calculation_point%k
 
         ideg = qcmplx(0q0, -1q0)
 
@@ -712,7 +723,7 @@ contains
             call this%calculate_solution()
         endif
 
-        k1 = 2 * PI / this%scatterer%lambda
+        k1 = this%scatterer%calculation_point%k
 
         sca = 0
         ideg = qcmplx(0q0, 1q0)
